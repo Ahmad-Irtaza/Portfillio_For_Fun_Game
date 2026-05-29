@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ahmad Irtaza — Open World Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Press Start 2P',monospace;image-rendering:pixelated}
+#game-container{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0f}
+
+/* ---- TITLE SCREEN ---- */
+#title-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a0f;z-index:1000;gap:0}
+.title-scanlines{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);pointer-events:none;z-index:10}
+.title-crt{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.6) 100%);pointer-events:none;z-index:9}
+.title-stars{position:absolute;inset:0;overflow:hidden}
+.star{position:absolute;background:#fff;border-radius:50%;animation:twinkle 2s infinite}
+@keyframes twinkle{0%,100%{opacity:0.2}50%{opacity:1}}
+.title-logo{position:relative;z-index:20;text-align:center;margin-bottom:3rem}
+.title-logo .game-title{font-family:'Press Start 2P',monospace;font-size:clamp(1rem,3vw,2.2rem);color:#ffd700;text-shadow:3px 3px 0 #b8860b,6px 6px 0 #8b6914,-2px -2px 0 #fff8dc;letter-spacing:0.1em;line-height:1.4;animation:titlePulse 3s ease-in-out infinite}
+.title-logo .sub-title{font-family:'Press Start 2P',monospace;font-size:clamp(0.4rem,1.2vw,0.75rem);color:#00f5ff;margin-top:1rem;letter-spacing:0.2em;text-shadow:0 0 10px #00f5ff}
+.title-logo .edition{font-family:'VT323',monospace;font-size:clamp(1rem,2vw,1.4rem);color:rgba(255,255,255,0.5);margin-top:0.5rem;letter-spacing:0.3em}
+@keyframes titlePulse{0%,100%{text-shadow:3px 3px 0 #b8860b,6px 6px 0 #8b6914,-2px -2px 0 #fff8dc}50%{text-shadow:3px 3px 0 #b8860b,6px 6px 0 #8b6914,-2px -2px 0 #fff8dc,0 0 40px rgba(255,215,0,0.5)}}
+.title-char-preview{position:relative;z-index:20;margin-bottom:2rem}
+.title-char-preview canvas{image-rendering:pixelated;border:2px solid rgba(255,215,0,0.3);border-radius:4px;box-shadow:0 0 30px rgba(255,215,0,0.2)}
+.title-stats{position:relative;z-index:20;display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;max-width:500px;width:90%;margin-bottom:2rem}
+.stat-box{border:2px solid rgba(0,245,255,0.3);padding:0.5rem;text-align:center;background:rgba(0,245,255,0.05)}
+.stat-box .label{font-size:0.35rem;color:rgba(0,245,255,0.7);letter-spacing:0.1em;margin-bottom:0.3rem}
+.stat-box .val{font-size:0.6rem;color:#ffd700}
+.press-start{position:relative;z-index:20;font-size:clamp(0.45rem,1.2vw,0.75rem);color:#00f5ff;animation:blink 1.2s step-end infinite;letter-spacing:0.15em;cursor:pointer;padding:0.75rem 1.5rem;border:2px solid #00f5ff;background:rgba(0,245,255,0.05);transition:background 0.2s}
+.press-start:hover{background:rgba(0,245,255,0.15)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.controls-hint{position:relative;z-index:20;margin-top:1.5rem;font-size:0.35rem;color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-align:center;line-height:2}
+
+/* ---- GAME CANVAS ---- */
+#game-canvas{image-rendering:pixelated;cursor:default;display:none}
+
+/* ---- HUD ---- */
+#hud{position:absolute;inset:0;pointer-events:none;z-index:100;display:none}
+.hud-topleft{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px}
+.hud-name{font-size:0.45rem;color:#ffd700;text-shadow:1px 1px 0 #000;letter-spacing:0.05em}
+.hud-bar-wrap{display:flex;align-items:center;gap:6px}
+.hud-bar-label{font-size:0.3rem;color:rgba(255,255,255,0.6);width:16px}
+.hud-bar{height:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.5);overflow:hidden;width:80px}
+.hud-bar-fill{height:100%;transition:width 0.5s}
+.hp-fill{background:linear-gradient(90deg,#ff3333,#ff6666)}
+.xp-fill{background:linear-gradient(90deg,#ffd700,#ffed4a)}
+.hud-level{font-size:0.35rem;color:#fff;background:rgba(0,0,0,0.7);border:1px solid #ffd700;padding:2px 6px}
+
+.hud-topright{position:absolute;top:12px;right:12px}
+.minimap{width:100px;height:100px;border:2px solid rgba(255,215,0,0.5);background:rgba(0,0,0,0.8);position:relative;overflow:hidden}
+.minimap-title{font-size:0.28rem;color:rgba(255,215,0,0.7);text-align:center;padding:2px;border-bottom:1px solid rgba(255,215,0,0.3)}
+.minimap canvas{image-rendering:pixelated;width:100%;height:calc(100% - 16px);object-fit:contain}
+
+.hud-bottomleft{position:absolute;bottom:12px;left:12px}
+.zone-label{font-size:0.38rem;color:#00f5ff;background:rgba(0,0,0,0.8);border:1px solid rgba(0,245,255,0.4);padding:4px 8px;text-shadow:0 0 8px rgba(0,245,255,0.8)}
+
+.hud-bottomright{position:absolute;bottom:12px;right:12px;display:flex;gap:6px;flex-direction:column;align-items:flex-end}
+.hud-key{font-size:0.28rem;color:rgba(255,255,255,0.5);text-align:right}
+.hud-key span{display:inline-block;border:1px solid rgba(255,255,255,0.4);padding:1px 4px;margin-left:4px;background:rgba(255,255,255,0.05)}
+
+.hud-quest{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);border:2px solid #ffd700;padding:6px 14px;text-align:center;display:none}
+.hud-quest-title{font-size:0.28rem;color:rgba(255,215,0,0.7);margin-bottom:2px}
+.hud-quest-text{font-size:0.35rem;color:#fff}
+
+/* ---- DIALOGUE BOX ---- */
+#dialogue{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.95);border-top:3px solid #ffd700;padding:16px 20px 14px;z-index:200;display:none;max-height:200px;pointer-events:all}
+#dialogue::before{content:'';position:absolute;top:-3px;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#ffd700,#00f5ff,#ffd700,transparent)}
+.dialogue-speaker{font-size:0.45rem;color:#ffd700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.speaker-portrait{width:32px;height:32px;border:2px solid #ffd700;image-rendering:pixelated;background:#111}
+.dialogue-text{font-family:'VT323',monospace;font-size:1.15rem;color:#fff;line-height:1.5;max-width:900px}
+.dialogue-continue{font-size:0.32rem;color:#ffd700;text-align:right;animation:blink 1s step-end infinite;margin-top:6px}
+.dialogue-choices{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.choice-btn{font-family:'Press Start 2P',monospace;font-size:0.38rem;color:#00f5ff;background:none;border:1px solid rgba(0,245,255,0.3);padding:6px 10px;cursor:pointer;text-align:left;transition:all 0.2s;pointer-events:all}
+.choice-btn:hover,.choice-btn.selected{background:rgba(0,245,255,0.15);border-color:#00f5ff;color:#fff}
+.choice-btn::before{content:'▶ ';color:#ffd700}
+
+/* ---- ZONE TRANSITIONS ---- */
+#zone-transition{position:absolute;inset:0;background:#000;z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+.zone-trans-name{font-size:clamp(0.6rem,2vw,1.2rem);color:#ffd700;text-align:center;text-shadow:0 0 20px rgba(255,215,0,0.8)}
+.zone-trans-sub{font-family:'VT323',monospace;font-size:clamp(1rem,2.5vw,1.5rem);color:rgba(255,255,255,0.6);letter-spacing:0.3em}
+
+/* ---- MENU SCREENS ---- */
+#menu-screen{position:absolute;inset:0;background:rgba(0,0,0,0.9);z-index:300;display:none;align-items:center;justify-content:center}
+.menu-panel{border:3px solid #ffd700;background:#0a0a0f;padding:2rem;min-width:300px;max-width:90vw;max-height:90vh;overflow-y:auto}
+.menu-panel::-webkit-scrollbar{width:4px}
+.menu-panel::-webkit-scrollbar-thumb{background:#ffd700}
+.menu-title{font-size:0.65rem;color:#ffd700;margin-bottom:1.5rem;text-align:center;border-bottom:2px solid rgba(255,215,0,0.3);padding-bottom:0.75rem}
+.menu-close{position:absolute;top:12px;right:12px;font-size:0.45rem;color:#fff;cursor:pointer;border:1px solid rgba(255,255,255,0.3);padding:4px 8px;pointer-events:all}
+.menu-close:hover{background:rgba(255,255,255,0.1)}
+
+/* ---- INVENTORY/SKILLS PANEL ---- */
+.skill-tree{display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem}
+.skill-node{border:2px solid rgba(0,245,255,0.3);padding:0.6rem;background:rgba(0,245,255,0.03);transition:all 0.2s;cursor:default}
+.skill-node.unlocked{border-color:#00f5ff;background:rgba(0,245,255,0.08)}
+.skill-node.mastered{border-color:#ffd700;background:rgba(255,215,0,0.08)}
+.skill-node-name{font-size:0.32rem;color:#fff;margin-bottom:0.3rem}
+.skill-node-level{font-size:0.28rem;color:#ffd700}
+.skill-bar{height:4px;background:rgba(255,255,255,0.1);margin-top:4px;overflow:hidden}
+.skill-bar-fill{height:100%;background:linear-gradient(90deg,#00f5ff,#8b5cf6)}
+
+/* ---- ACHIEVEMENT POPUP ---- */
+#achievement-popup{position:absolute;top:60px;right:12px;background:rgba(0,0,0,0.95);border:2px solid #ffd700;padding:10px 14px;z-index:400;display:none;min-width:200px;animation:slideIn 0.4s ease}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.ach-popup-title{font-size:0.3rem;color:#ffd700;margin-bottom:4px}
+.ach-popup-text{font-size:0.35rem;color:#fff}
+.ach-popup-icon{font-size:1.2rem;margin-right:6px}
+</style>
+</head>
+<body>
+<div id="game-container">
+  <!-- TITLE SCREEN -->
+  <div id="title-screen">
+    <div class="title-stars" id="stars-container"></div>
+    <div class="title-scanlines"></div>
+    <div class="title-crt"></div>
+
+    <div class="title-logo">
+      <div class="game-title">AHMAD IRTAZA<br>CHRONICLES</div>
+      <div class="sub-title">∙ OPEN WORLD PORTFOLIO ∙</div>
+      <div class="edition">SOFTWARE ENGINEER EDITION — 2025</div>
+    </div>
+
+    <div class="title-char-preview">
+      <canvas id="title-char-canvas" width="80" height="80"></canvas>
+    </div>
+
+    <div class="title-stats">
+      <div class="stat-box"><div class="label">CLASS</div><div class="val">SW.ENG</div></div>
+      <div class="stat-box"><div class="label">RANK</div><div class="val">#661 GLB</div></div>
+      <div class="stat-box"><div class="label">LEVEL</div><div class="val">GRAD'26</div></div>
+      <div class="stat-box"><div class="label">GUILD</div><div class="val">FAST NUCES</div></div>
+      <div class="stat-box"><div class="label">PROJECTS</div><div class="val">15+</div></div>
+      <div class="stat-box"><div class="label">CERTS</div><div class="val">6</div></div>
+    </div>
+
+    <button class="press-start" id="start-btn">▶ PRESS START</button>
+
+    <div class="controls-hint">
+      WASD / ARROW KEYS — MOVE &nbsp;|&nbsp; E / SPACE — INTERACT &nbsp;|&nbsp; M — MAP &nbsp;|&nbsp; I — SKILLS &nbsp;|&nbsp; ESC — MENU
+    </div>
+  </div>
+
+  <!-- GAME CANVAS -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-topleft">
+      <div class="hud-name">⚔ AHMAD IRTAZA</div>
+      <div class="hud-bar-wrap">
+        <div class="hud-bar-label">HP</div>
+        <div class="hud-bar"><div class="hud-bar-fill hp-fill" id="hp-bar" style="width:100%"></div></div>
+      </div>
+      <div class="hud-bar-wrap">
+        <div class="hud-bar-label">XP</div>
+        <div class="hud-bar"><div class="hud-bar-fill xp-fill" id="xp-bar" style="width:0%"></div></div>
+      </div>
+      <div class="hud-level" id="level-display">LVL 22</div>
+    </div>
+
+    <div class="hud-topright">
+      <div class="minimap">
+        <div class="minimap-title">MAP</div>
+        <canvas id="minimap-canvas" width="96" height="84"></canvas>
+      </div>
+    </div>
+
+    <div class="hud-bottomleft">
+      <div class="zone-label" id="zone-label">◈ SPAWN POINT</div>
+    </div>
+
+    <div class="hud-bottomright">
+      <div class="hud-key"><span>E</span> INTERACT</div>
+      <div class="hud-key"><span>I</span> SKILLS</div>
+      <div class="hud-key"><span>M</span> QUESTS</div>
+      <div class="hud-key"><span>ESC</span> MENU</div>
+    </div>
+
+    <div class="hud-quest" id="hud-quest">
+      <div class="hud-quest-title">ACTIVE QUEST</div>
+      <div class="hud-quest-text" id="quest-text">Explore the world</div>
+    </div>
+  </div>
+
+  <!-- ZONE TRANSITION -->
+  <div id="zone-transition" style="display:none;align-items:center;justify-content:center;flex-direction:column;gap:1rem">
+    <div class="zone-trans-name" id="zone-name-display"></div>
+    <div class="zone-trans-sub" id="zone-sub-display"></div>
+  </div>
+
+  <!-- DIALOGUE BOX -->
+  <div id="dialogue">
+    <div class="dialogue-speaker">
+      <canvas class="speaker-portrait" id="speaker-portrait" width="32" height="32"></canvas>
+      <span id="speaker-name">???</span>
+    </div>
+    <div class="dialogue-text" id="dialogue-text"></div>
+    <div class="dialogue-choices" id="dialogue-choices" style="display:none"></div>
+    <div class="dialogue-continue" id="dialogue-continue">[E] CONTINUE ▼</div>
+  </div>
+
+  <!-- MENU SCREEN -->
+  <div id="menu-screen">
+    <div class="menu-panel" id="menu-panel">
+      <div class="menu-title" id="menu-title">SKILLS CODEX</div>
+      <div id="menu-content"></div>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENT POPUP -->
+  <div id="achievement-popup">
+    <div class="ach-popup-title">🏆 ACHIEVEMENT UNLOCKED!</div>
+    <div class="ach-popup-text" id="ach-popup-text"></div>
+  </div>
+</div>
+
+<script>
+// =============================================================
+//  AHMAD IRTAZA — OPEN WORLD RPG PORTFOLIO ENGINE
+// =============================================================
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+// ----- CONSTANTS -----
+const TILE = 32;
+const SCALE = 2;
+const TS = TILE; // tile size in world units
+
+// ----- PALETTE -----
+const P = {
+  // Ground
+  grass: '#1a472a', grassL: '#1e5c30', grassD: '#163d24',
+  path: '#8b7355', pathL: '#a08565', pathD: '#766145',
+  water: '#0a3a5c', waterL: '#0e4d7a', waterShine: '#1a6494',
+  stone: '#555566', stoneL: '#666677', stoneD: '#444455',
+  sand: '#c2956b', sandL: '#d4a87a',
+  // Buildings
+  wallDark: '#2a2a3a', wallMid: '#3a3a4e', wallLight: '#4a4a62',
+  roof: '#8b2222', roofL: '#a52828',
+  wood: '#5c3d1e', woodL: '#7a5229',
+  // Colors
+  cyan: '#00f5ff', gold: '#ffd700', purple: '#8b5cf6', pink: '#f0abfc',
+  green: '#22c55e', red: '#ef4444', orange: '#f97316',
+  white: '#ffffff', black: '#000000', nearBlack: '#0a0a0f',
+  // Neon signs
+  neon1: '#00f5ff', neon2: '#f0abfc', neon3: '#ffd700',
+};
+
+// ----- WORLD MAP (tile codes) -----
+// 0=grass, 1=path, 2=water, 3=stone wall, 4=tree, 5=rock, 6=building floor
+// 7=npc marker, 8=portal, 9=sign, 10=chest, 11=campfire, 12=desk, 13=bookshelf
+// 14=computer, 15=trophy, 16=flower, 17=bridge, 18=sand, 19=wood floor, 20=door
+// Upper nibble = variation
+
+const MAP_W = 60, MAP_H = 60;
+let worldMap;
+let objectMap; // stores interactive objects
+
+function buildWorld() {
+  worldMap = new Array(MAP_H).fill(null).map(() => new Array(MAP_W).fill(0));
+  objectMap = new Array(MAP_H).fill(null).map(() => new Array(MAP_W).fill(null));
+
+  // Helper
+  const set = (x, y, tile, obj = null) => {
+    if (x >= 0 && x < MAP_W && y >= 0 && y < MAP_H) {
+      worldMap[y][x] = tile;
+      if (obj) objectMap[y][x] = obj;
+    }
+  };
+  const rect = (x, y, w, h, tile) => {
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) set(x + dx, y + dy, tile);
+  };
+  const border = (x, y, w, h, tile) => {
+    for (let dx = 0; dx < w; dx++) { set(x + dx, y, tile); set(x + dx, y + h - 1, tile); }
+    for (let dy = 0; dy < h; dy++) { set(x, y + dy, tile); set(x + w - 1, y + dy, tile); }
+  };
+
+  // Base grass everywhere
+  rect(0, 0, MAP_W, MAP_H, 0);
+
+  // ============ ZONE 1: SPAWN / HERO INTRO ============
+  // Central plaza
+  rect(22, 22, 16, 16, 1); // stone path plaza
+  // Welcome sign
+  set(28, 24, 9, {
+    type: 'sign', id: 'welcome',
+    name: 'WELCOME BOARD',
+    dialogue: ['welcome']
+  });
+  // Campfire center
+  set(29, 29, 11, { type: 'campfire', id: 'campfire1', name: 'CAMPFIRE', dialogue: ['campfire'] });
+  // Hero statue / spawn
+  set(29, 26, 15, { type: 'npc', id: 'ahmad_npc', name: '⚔ AHMAD IRTAZA', dialogue: ['intro1', 'intro2', 'intro3'], portrait: 'ahmad' });
+  // Decorative flowers
+  for (let i = 0; i < 12; i++) {
+    const fx = 20 + Math.floor(Math.random() * 20);
+    const fy = 20 + Math.floor(Math.random() * 20);
+    if (worldMap[fy][fx] === 0) set(fx, fy, 16);
+  }
+
+  // ============ PATHS FROM PLAZA ============
+  // North path to Skill Forge
+  for (let y = 10; y <= 22; y++) { set(28, y, 1); set(29, y, 1); }
+  // East path to Projects
+  for (let x = 38; x <= 50; x++) { set(x, 28, 1); set(x, 29, 1); }
+  // South path to Achievements
+  for (let y = 38; y <= 50; y++) { set(28, y, 1); set(29, y, 1); }
+  // West path to Contact
+  for (let x = 10; x <= 22; x++) { set(x, 28, 1); set(x, 29, 1); }
+
+  // Trees lining paths
+  const treeLine = (x, y) => { if (worldMap[y][x] === 0) set(x, y, 4); };
+  for (let y = 10; y <= 21; y++) { treeLine(26, y); treeLine(31, y); }
+  for (let x = 38; x <= 49; x++) { treeLine(x, 26); treeLine(x, 31); }
+  for (let y = 39; y <= 49; y++) { treeLine(26, y); treeLine(31, y); }
+  for (let x = 10; x <= 21; x++) { treeLine(x, 26); treeLine(x, 31); }
+
+  // Water features around plaza
+  rect(14, 14, 6, 6, 2); // NW lake
+  rect(40, 14, 6, 6, 2); // NE lake
+  rect(14, 40, 6, 6, 2); // SW lake
+  rect(40, 40, 6, 6, 2); // SE lake
+  // Bridges
+  set(28, 17, 17, null); set(29, 17, 17); // bridge over top
+  set(17, 28, 17, null); set(17, 29, 17); // bridge left
+  set(42, 28, 17, null); set(42, 29, 17); // bridge right
+  set(28, 42, 17, null); set(29, 42, 17); // bridge bottom
+
+  // ============ ZONE 2: SKILL FORGE (North) ============
+  rect(20, 2, 20, 17, 6); // floor
+  border(20, 2, 20, 17, 3); // walls
+  // Interior: skill stations
+  set(29, 3, 9, { type: 'sign', id: 'forge_sign', name: 'THE SKILL FORGE', dialogue: ['forge_intro'] });
+  set(22, 5, 14, { type: 'npc', id: 'ai_terminal', name: '🤖 AI/ML TERMINAL', dialogue: ['skill_ai1', 'skill_ai2'], portrait: 'terminal' });
+  set(27, 5, 14, { type: 'npc', id: 'web_terminal', name: '🌐 WEB TERMINAL', dialogue: ['skill_web1'], portrait: 'terminal' });
+  set(32, 5, 14, { type: 'npc', id: 'sys_terminal', name: '⚙ SYSTEMS TERMINAL', dialogue: ['skill_sys1'], portrait: 'terminal' });
+  set(22, 10, 13, { type: 'npc', id: 'devops_shelf', name: '☁ DEVOPS SHELF', dialogue: ['skill_devops1'], portrait: 'book' });
+  set(32, 10, 13, { type: 'npc', id: 'db_shelf', name: '🗄 DATABASE SHELF', dialogue: ['skill_db1'], portrait: 'book' });
+  set(29, 13, 10, { type: 'chest', id: 'skill_chest', name: '✦ SKILLS CHEST', dialogue: ['skill_chest'], unlocks: 'skills_menu' });
+  // Zone portal/sign
+  set(29, 14, 8, { type: 'portal', id: 'forge_portal', name: 'SKILL FORGE PORTAL', dialogue: ['forge_portal'] });
+
+  // ============ ZONE 3: PROJECT DUNGEON (East) ============
+  rect(43, 20, 17, 20, 6);
+  border(43, 20, 17, 20, 3);
+  set(50, 21, 9, { type: 'sign', id: 'proj_sign', name: 'PROJECT DUNGEON', dialogue: ['proj_intro'] });
+  // Boss: ADIFY
+  set(51, 24, 15, { type: 'npc', id: 'adify_boss', name: '★ ADIFY — BOSS PROJECT', dialogue: ['adify1', 'adify2', 'adify3'], portrait: 'boss' });
+  set(46, 27, 12, { type: 'npc', id: 'proj_ai', name: '🧠 AI PROJECTS DESK', dialogue: ['proj_ai1', 'proj_ai2'], portrait: 'desk' });
+  set(52, 30, 12, { type: 'npc', id: 'proj_web', name: '💻 WEB PROJECTS DESK', dialogue: ['proj_web1'], portrait: 'desk' });
+  set(46, 33, 12, { type: 'npc', id: 'proj_sys', name: '🔧 SYSTEMS DESK', dialogue: ['proj_sys1'], portrait: 'desk' });
+  set(54, 37, 10, { type: 'chest', id: 'proj_chest', name: '✦ PROJECT VAULT', dialogue: ['proj_chest'] });
+
+  // ============ ZONE 4: HALL OF ACHIEVEMENTS (South) ============
+  rect(20, 43, 20, 17, 6);
+  border(20, 43, 20, 17, 3);
+  set(29, 44, 9, { type: 'sign', id: 'ach_sign', name: 'HALL OF ACHIEVEMENTS', dialogue: ['ach_intro'] });
+  set(23, 48, 15, { type: 'npc', id: 'ieee_trophy', name: '🏆 IEEExtreme TROPHY', dialogue: ['ieee1', 'ieee2'], portrait: 'trophy' });
+  set(29, 46, 15, { type: 'npc', id: 'cert_npc', name: '📜 CERTIFICATIONS', dialogue: ['cert1', 'cert2'], portrait: 'scroll' });
+  set(35, 48, 15, { type: 'npc', id: 'lead_npc', name: '👑 LEADERSHIP', dialogue: ['lead1'], portrait: 'crown' });
+  set(23, 54, 15, { type: 'npc', id: 'hack_npc', name: '⚡ HACKATHONS', dialogue: ['hack1'], portrait: 'lightning' });
+  set(35, 54, 10, { type: 'chest', id: 'ach_chest', name: '✦ ACHIEVEMENT CHEST', dialogue: ['ach_chest'] });
+
+  // ============ ZONE 5: CONTACT PORTAL (West) ============
+  rect(2, 20, 17, 20, 6);
+  border(2, 20, 17, 20, 3);
+  set(10, 21, 9, { type: 'sign', id: 'contact_sign', name: 'CONTACT PORTAL', dialogue: ['contact_intro'] });
+  set(5, 25, 14, { type: 'npc', id: 'email_terminal', name: '📧 EMAIL TERMINAL', dialogue: ['contact_email'], portrait: 'terminal' });
+  set(10, 28, 14, { type: 'npc', id: 'github_terminal', name: '🐙 GITHUB PORTAL', dialogue: ['contact_github'], portrait: 'terminal' });
+  set(15, 25, 14, { type: 'npc', id: 'linkedin_terminal', name: '💼 LINKEDIN PORTAL', dialogue: ['contact_linkedin'], portrait: 'terminal' });
+  set(10, 33, 8, { type: 'portal', id: 'final_portal', name: '✨ HIRE ME PORTAL', dialogue: ['hire1', 'hire2'], portrait: 'portal' });
+
+  // Outer boundary - rocks/trees
+  for (let x = 0; x < MAP_W; x++) { set(x, 0, 5); set(x, MAP_H - 1, 5); }
+  for (let y = 0; y < MAP_H; y++) { set(0, y, 5); set(MAP_W - 1, y, 5); }
+  // More trees on edges
+  for (let i = 1; i < MAP_W - 1; i++) {
+    if (i % 3 !== 0) { treeLine(i, 1); treeLine(i, MAP_H - 2); }
+    if (i % 3 !== 1) { treeLine(1, i); treeLine(MAP_W - 2, i); }
+  }
+
+  // Decorative rocks scattered
+  const rockPositions = [[7,7],[7,52],[52,7],[52,52],[18,18],[41,18],[18,41],[41,41]];
+  rockPositions.forEach(([rx, ry]) => { if (worldMap[ry][rx] === 0) set(rx, ry, 5); });
+}
+
+// ----- DIALOGUE DATABASE -----
+const DIALOGUES = {
+  welcome: [
+    { speaker: 'WELCOME BOARD', text: '⚔ Welcome, Adventurer!\n\nYou have entered the world of AHMAD IRTAZA — Software Engineer, AI Architect, and Problem Solver.\n\nExplore 5 zones to discover my story.' },
+    { speaker: 'WELCOME BOARD', text: '🗺 ZONES:\n▸ NORTH → Skill Forge\n▸ EAST → Project Dungeon\n▸ SOUTH → Hall of Achievements\n▸ WEST → Contact Portal\n\nInteract with NPCs for lore. Collect all chests!' }
+  ],
+  campfire: [
+    { speaker: 'CAMPFIRE', text: '*crackling sounds*\n\nThis campfire sits at the heart of Ahmad\'s world. Legends say great code was written by its light at 3am... many, many times.' }
+  ],
+  intro1: [
+    { speaker: '⚔ AHMAD IRTAZA', text: 'Greetings, Traveler!\n\nI\'m Ahmad Irtaza — a Software Engineering student at FAST NUCES (Batch 2026), based in Pakistan.\n\nI build things that matter.' },
+  ],
+  intro2: [
+    { speaker: '⚔ AHMAD IRTAZA', text: 'My quest spans AI/ML, Full Stack Web, Systems Programming, and everything in between.\n\nI ranked 7th in Pakistan and 661st GLOBALLY in IEEExtreme 18.0. The grind never stops.' },
+  ],
+  intro3: [
+    { speaker: '⚔ AHMAD IRTAZA', text: 'Ready to explore? Head NORTH to train at the Skill Forge, EAST to raid the Project Dungeon, SOUTH to see my achievements, or WEST to contact me.\n\nMay your code compile on the first try! 🗡️' }
+  ],
+  campfire: [{ speaker: 'CAMPFIRE', text: '*crackling sounds*\n\nThis campfire has witnessed many late-night coding sessions. Press I to view Skills, M for Quests.' }],
+  forge_intro: [{ speaker: 'SKILL FORGE', text: '⚒ Welcome to the SKILL FORGE!\n\nHere Ahmad has mastered many disciplines. Interact with the terminals to learn what weapons are in his arsenal.' }],
+  skill_ai1: [{ speaker: '🤖 AI/ML TERMINAL', text: 'LOADING: AI & MACHINE LEARNING\n\n▸ Python, PyTorch\n▸ Stable Diffusion (SDXL, SVD-XT)\n▸ Computer Vision & OpenCV\n▸ Scikit-Learn, Pandas, NumPy\n▸ Prompt Engineering\n▸ GrabCut & Segmentation' }],
+  skill_ai2: [{ speaker: '🤖 AI/ML TERMINAL', text: 'HIGHLIGHT: Built ADIFY — an AI that turns product images into cinematic CGI video ads using Stable Diffusion. Computer Vision pipeline for background synthesis.\n\nFEAT: 360° product visualization, SVD-XT video generation' }],
+  skill_web1: [{ speaker: '🌐 WEB TERMINAL', text: 'LOADING: FULL STACK WEB\n\n▸ HTML5, CSS3, JavaScript\n▸ React, Bootstrap, Tailwind CSS\n▸ PHP & CMS Systems\n▸ WhatsApp API Integration\n▸ Responsive Design\n▸ UI/UX Implementation\n\nBuilt 6+ client websites!' }],
+  skill_sys1: [{ speaker: '⚙ SYSTEMS TERMINAL', text: 'LOADING: SYSTEMS PROGRAMMING\n\n▸ C, C++, C#, Rust\n▸ Socket Programming\n▸ Multithreading\n▸ OS Simulation & CPU Scheduling\n▸ Network Simulation\n▸ Memory Management' }],
+  skill_devops1: [{ speaker: '☁ DEVOPS SHELF', text: 'LOADING: DEVOPS & CLOUD\n\n▸ Docker & Kubernetes\n▸ Linux (Bash scripting)\n▸ Git & GitHub\n▸ RunPods, Colab, Kaggle\n▸ CI/CD Pipelines\n▸ Cloud Deployments' }],
+  skill_db1: [{ speaker: '🗄 DATABASE SHELF', text: 'LOADING: DATABASES\n\n▸ SQL (Intermediate — HackerRank Certified)\n▸ Database Design & ERD\n▸ Normalization & Optimization\n▸ LMS Schema Design\n▸ Complex Query Writing' }],
+  skill_chest: [{ speaker: '✦ SKILLS CHEST', text: '🔓 SKILLS CODEX UNLOCKED!\n\nYou have collected Ahmad\'s complete skill inventory. Press I anytime to view the full Skill Tree and power levels!' }],
+  forge_portal: [{ speaker: 'SKILL FORGE PORTAL', text: '✨ The Skill Forge glows with power.\n\nAll disciplines mastered here flow into every project Ahmad builds. The synergy of AI + Web + Systems = unstoppable engineering.' }],
+  proj_intro: [{ speaker: 'PROJECT DUNGEON', text: '⚔ Enter the PROJECT DUNGEON!\n\nHere lie Ahmad\'s greatest creations. Each desk holds a project. The BOSS room features ADIFY — the crown jewel.\n\nBeware: this dungeon is full of elegant code.' }],
+  adify1: [{ speaker: '★ ADIFY', text: '◈ BOSS PROJECT: ADIFY\n\nAI-Powered Advertisement Suite — transforms product images into CINEMATIC CGI advertisements.\n\nStack: Python, PyTorch, Stable Diffusion SDXL, SVD-XT, OpenCV, GrabCut' }],
+  adify2: [{ speaker: '★ ADIFY', text: '⚡ ADIFY FEATURES:\n▸ Video generation via Stable Diffusion SVD-XT\n▸ 360° product visualization (GIF/MP4)\n▸ Static ad pipeline using GrabCut + CV algorithms\n▸ AI-based background synthesis\n▸ Dynamic camera effects' }],
+  adify3: [{ speaker: '★ ADIFY', text: '🏆 This project represents Ahmad\'s ability to combine Computer Vision + Generative AI + Backend Engineering into a production-grade system.\n\nGitHub: github.com/Ahmad-Irtaza\n\n★ BOSS DEFEATED — XP +500!' }],
+  proj_ai1: [{ speaker: '🧠 AI PROJECTS', text: 'AI/ML PROJECT INVENTORY:\n\n▸ AI Image Generator (Stable Diffusion)\n▸ Image Super-Resolution (4x upscaling)\n▸ Background Remover (CV segmentation)\n▸ Movie Recommendation System\n▸ AI Doctor Diagnostic Assistant' }],
+  proj_ai2: [{ speaker: '🧠 AI PROJECTS', text: 'MORE AI CREATIONS:\n\n▸ Real-Estate Price Predictor (regression)\n▸ AI Palette Generator (dominant color extraction)\n▸ Mood Logger & Analysis (mental health tracker)\n\nAll built with Python, PyTorch, Scikit-Learn' }],
+  proj_web1: [{ speaker: '💻 WEB PROJECTS', text: 'WEB DEV PORTFOLIO:\n\n▸ AR Pharmacy & Distribution (WhatsApp API)\n▸ AL Tanweer Doors & Windows (UAE corporate)\n▸ MN International Tours (travel agency)\n▸ Ainna Inqlab News Portal (govt news)\n▸ RT Clothing (e-commerce fashion)\n▸ EduBridge Classroom (smart UI)' }],
+  proj_sys1: [{ speaker: '🔧 SYSTEMS PROJECTS', text: 'SYSTEMS ENGINEERING:\n\n▸ Multithreaded Chat App (C++, Sockets)\n▸ OS Simulation (CPU Scheduling)\n▸ Network Simulation (Queuing Systems)\n▸ Google Classroom Clone (C#, SQL)\n▸ LMS Database Design (ERD)\n▸ CLI Chess Engine (C++)' }],
+  proj_chest: [{ speaker: '✦ PROJECT VAULT', text: '🔓 PROJECT VAULT UNLOCKED!\n\nYou have explored Ahmad\'s complete project universe. 15+ projects across AI, Web, Systems, and Algorithms.\n\ngithub.com/Ahmad-Irtaza ← All code lives here!' }],
+  ach_intro: [{ speaker: 'HALL OF ACHIEVEMENTS', text: '🏛 Welcome to the HALL OF ACHIEVEMENTS!\n\nThese halls honor Ahmad\'s greatest victories — competitions won, certifications earned, communities led.' }],
+  ieee1: [{ speaker: '🏆 IEEExtreme TROPHY', text: '⚡ IEEExtreme 18.0 — NATIONAL RECOGNITION\n\n▸ RANKED 7TH IN PAKISTAN\n▸ 661st GLOBALLY\n▸ 24-hour programming marathon\n▸ IEEE\'s premier competitive programming event worldwide' }],
+  ieee2: [{ speaker: '🏆 IEEExtreme TROPHY', text: 'IEEExtreme is the Olympics of competitive programming. Placing top 7 in Pakistan puts Ahmad in an elite tier of problem-solvers.\n\nOther comp highlights:\n▸ Top 10% — FPSC Speed Programming\n▸ 4th — AI Voice Hackathon\n▸ Winner — Code Conquer, NaSCon \'23' }],
+  cert1: [{ speaker: '📜 CERTIFICATIONS', text: 'CERTIFICATION ARCHIVE:\n\n▸ Software Engineer Role — HackerRank\n▸ SQL Intermediate — HackerRank\n▸ Python Basic — HackerRank\n▸ Google Prompt Engineering — Coursera\n▸ Machine Learning — Coursera\n▸ DevOps Engineering — Coursera' }],
+  cert2: [{ speaker: '📜 CERTIFICATIONS', text: '6 verified certifications spanning engineering, AI, DevOps, and data — each one representing real skill, not just a badge.\n\nVerifiable on HackerRank & Coursera profiles.' }],
+  lead1: [{ speaker: '👑 LEADERSHIP', text: 'LEADERSHIP RECORD:\n\n▸ Lead/Co-Lead: GDSC, MLSA, ACM, FPSC\n▸ VP — FAST NUCES Welcome Party \'23\n▸ Director Security — Major events\n▸ Organizer — NU-TECH conference\n\n4 societies. Hundreds of members. Real impact.' }],
+  hack1: [{ speaker: '⚡ HACKATHONS', text: 'HACKATHON RECORD:\n\n▸ AI Voice Hackathon — 4th Place\n▸ Code Conquer — Winner (NUTEC 2024)\n▸ NaSCon \'23 — Achievement Award\n▸ FPSC Speed Programming — Top 10%\n\nFast. Focused. Fearless under pressure.' }],
+  ach_chest: [{ speaker: '✦ ACHIEVEMENT CHEST', text: '🔓 ACHIEVEMENT CHEST OPENED!\n\nYou\'ve witnessed all of Ahmad\'s milestones. From top 7 Pakistan to 6 certifications and 4 society leads — this is a record of relentless pursuit of excellence.' }],
+  contact_intro: [{ speaker: 'CONTACT PORTAL', text: '📡 Welcome to the CONTACT PORTAL!\n\nThis is where quests begin. Use the terminals to reach out, connect, or open a collaboration dialogue.\n\nAhmad is OPEN TO OPPORTUNITIES.' }],
+  contact_email: [{ speaker: '📧 EMAIL TERMINAL', text: '> ESTABLISHING SECURE LINE...\n> CONNECTED\n\nEMAIL: irtaza.butt.9316@gmail.com\n\nDrop a message for collaborations, job offers, freelance work, or just to say hello. Response time: fast.' }],
+  contact_github: [{ speaker: '🐙 GITHUB PORTAL', text: '> ACCESSING REPOSITORY...\n> 15+ REPOSITORIES FOUND\n\ngithub.com/Ahmad-Irtaza\n\nAll projects live here. Code quality, commit history, and engineering style — open for inspection. Stars appreciated! ⭐' }],
+  contact_linkedin: [{ speaker: '💼 LINKEDIN PORTAL', text: '> PROFESSIONAL NETWORK LINK\n> STATUS: OPEN TO WORK\n\nlinkedin.com/in/ahmad-irtaza-28231a2a6\n\nConnect for professional opportunities. Full profile, recommendations, and work history available.' }],
+  hire1: [{ speaker: '✨ HIRE ME PORTAL', text: '⚡ You\'ve made it to the FINAL PORTAL!\n\nYou\'ve explored my entire world. You know my skills, projects, and achievements.\n\nNow the question is... what happens next?' }],
+  hire2: [{ speaker: '✨ HIRE ME PORTAL', text: '🚀 Ahmad Irtaza is:\n\n▸ A graduating Software Engineer (2026)\n▸ AI/ML specialist with proven projects\n▸ Full-stack web developer (6+ clients)\n▸ Systems programmer (C/C++/Rust)\n▸ Pakistan\'s top competitive programmer\n\nReady to join your team.\n\nContact: irtaza.butt.9316@gmail.com' }],
+};
+
+// ----- PLAYER -----
+const player = {
+  x: 29 * TS + TS / 2,  // world coords
+  y: 30 * TS + TS / 2,
+  vx: 0, vy: 0,
+  speed: 2.2,
+  facing: 'down',
+  frame: 0,
+  frameTimer: 0,
+  frameRate: 12,
+  moving: false,
+  xp: 0, maxXp: 100, level: 22,
+  hp: 100, maxHp: 100,
+  unlockedZones: new Set(['spawn']),
+  collected: new Set(),
+};
+
+// ----- CAMERA -----
+const cam = { x: 0, y: 0 };
+
+// ----- INPUT -----
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.code] = true; });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ----- DIALOGUE STATE -----
+const dlg = {
+  active: false,
+  queue: [],
+  currentIdx: 0,
+  speaker: '',
+  text: '',
+  displayText: '',
+  typeTimer: 0,
+  typeSpeed: 1.5,
+  charIdx: 0,
+  onClose: null,
+  portrait: 'default',
+};
+
+// ----- GAME STATE -----
+const game = {
+  started: false,
+  zone: 'spawn',
+  transitioning: false,
+  questActive: 'Explore the world',
+  achievementsUnlocked: new Set(),
+  menuOpen: false,
+  menuType: null,
+};
+
+// ----- ZONE DEFINITIONS -----
+const ZONES = {
+  spawn:   { name: 'SPAWN POINT',         sub: 'The Heart of the World',   color: '#00f5ff', cx: 29, cy: 29 },
+  forge:   { name: 'SKILL FORGE',         sub: 'Where Power is Forged',     color: '#f0abfc', cx: 29, cy: 8  },
+  dungeon: { name: 'PROJECT DUNGEON',     sub: 'Dungeon of Creations',      color: '#ffd700', cx: 51, cy: 29 },
+  hall:    { name: 'HALL OF ACHIEVEMENTS',sub: 'Temple of Victories',       color: '#22c55e', cx: 29, cy: 51 },
+  contact: { name: 'CONTACT PORTAL',      sub: 'Gateway to Collaboration',  color: '#f97316', cx: 10, cy: 29 },
+};
+
+// ----- TILE SOLID CHECK -----
+function isSolid(tx, ty) {
+  if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return true;
+  const t = worldMap[ty][tx];
+  return t === 3 || t === 4 || t === 5 || t === 2;
+}
+
+// ----- GET OBJECT AT TILE -----
+function getObject(tx, ty) {
+  if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return null;
+  return objectMap[ty][tx];
+}
+
+// ----- PORTRAIT DRAWING -----
+function drawPortrait(pCanvas, type) {
+  const c = pCanvas.getContext('2d');
+  c.clearRect(0, 0, 32, 32);
+  c.imageSmoothingEnabled = false;
+  const colors = {
+    ahmad: ['#1a3a5c', '#2a5c8a', '#ffd700', '#ffb347'],
+    terminal: ['#0a2a0a', '#0f4a0f', '#00f5ff', '#00ffaa'],
+    book: ['#3a1a0a', '#8b4513', '#ffd700', '#fff'],
+    boss: ['#2a0a0a', '#5c0a0a', '#ffd700', '#f97316'],
+    trophy: ['#2a2a0a', '#4a4a0a', '#ffd700', '#ffed4a'],
+    scroll: ['#2a1a0a', '#5c3d1e', '#ffd700', '#fff'],
+    crown: ['#2a1a0a', '#3a2a0a', '#ffd700', '#ffed4a'],
+    lightning: ['#0a0a2a', '#1a1a5c', '#ffd700', '#fff'],
+    desk: ['#1a1a2a', '#2a2a4a', '#00f5ff', '#8b5cf6'],
+    portal: ['#1a0a2a', '#3a0a5c', '#f0abfc', '#8b5cf6'],
+    default: ['#1a1a1a', '#2a2a2a', '#00f5ff', '#fff'],
+  };
+  const col = colors[type] || colors.default;
+  c.fillStyle = col[0]; c.fillRect(0, 0, 32, 32);
+  c.fillStyle = col[1];
+  // Face/body
+  c.fillRect(8, 6, 16, 16);
+  c.fillStyle = col[2];
+  c.fillRect(12, 10, 4, 4); c.fillRect(16, 10, 4, 4);
+  c.fillRect(10, 17, 12, 3);
+  c.fillStyle = col[3];
+  c.fillRect(10, 24, 5, 6); c.fillRect(17, 24, 5, 6);
+}
+
+// ----- TILE RENDERING -----
+function drawTile(x, y, tx, ty) {
+  const t = worldMap[ty][tx];
+  switch (t) {
+    case 0: // grass
+      ctx.fillStyle = ((tx + ty) % 2 === 0) ? P.grass : P.grassL;
+      ctx.fillRect(x, y, TS, TS);
+      if ((tx * 7 + ty * 13) % 17 < 3) {
+        ctx.fillStyle = P.grassD;
+        ctx.fillRect(x + 2, y + 2, 3, 2);
+      }
+      break;
+    case 1: // path
+      ctx.fillStyle = P.path;
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = P.pathL;
+      ctx.fillRect(x + 1, y + 1, TS - 2, TS - 2);
+      if ((tx + ty) % 3 === 0) {
+        ctx.fillStyle = P.pathD;
+        ctx.fillRect(x + TS - 6, y + TS - 6, 5, 5);
+      }
+      break;
+    case 2: // water
+      ctx.fillStyle = P.water;
+      ctx.fillRect(x, y, TS, TS);
+      const wave = Math.sin(Date.now() * 0.002 + tx * 0.5 + ty * 0.5);
+      ctx.fillStyle = P.waterL;
+      ctx.fillRect(x + 4 + wave * 2, y + 8, 12, 3);
+      ctx.fillRect(x + 2, y + 18, 8, 3);
+      break;
+    case 3: // stone wall
+      ctx.fillStyle = P.stoneD;
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = P.stone;
+      ctx.fillRect(x + 1, y + 1, TS - 2, TS - 2);
+      ctx.fillStyle = P.stoneL;
+      ctx.fillRect(x + 2, y + 2, 12, 12);
+      ctx.fillRect(x + 16, y + 16, 12, 12);
+      break;
+    case 4: // tree
+      ctx.fillStyle = P.grassD;
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#0d3a1a';
+      ctx.fillRect(x + 8, y + 20, 6, 10);
+      ctx.fillStyle = '#1a5c2a';
+      ctx.fillRect(x + 4, y + 8, 14, 16);
+      ctx.fillStyle = P.grassL;
+      ctx.fillRect(x + 6, y + 6, 10, 14);
+      ctx.fillStyle = '#22703a';
+      ctx.fillRect(x + 8, y + 4, 6, 10);
+      break;
+    case 5: // rock
+      ctx.fillStyle = P.grass;
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = P.stoneD;
+      ctx.fillRect(x + 4, y + 8, 18, 14);
+      ctx.fillStyle = P.stone;
+      ctx.fillRect(x + 6, y + 10, 14, 10);
+      ctx.fillStyle = P.stoneL;
+      ctx.fillRect(x + 8, y + 12, 6, 4);
+      break;
+    case 6: // building floor
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#1e1e35';
+      ctx.fillRect(x + 1, y + 1, TS - 2, TS - 2);
+      if ((tx + ty) % 4 === 0) {
+        ctx.fillStyle = 'rgba(0,245,255,0.06)';
+        ctx.fillRect(x, y, TS, TS);
+      }
+      break;
+    case 9: // sign
+      ctx.fillStyle = P.grass;
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = P.wood;
+      ctx.fillRect(x + 12, y + 18, 4, 10);
+      ctx.fillStyle = P.woodL;
+      ctx.fillRect(x + 4, y + 8, 22, 14);
+      ctx.fillStyle = P.gold;
+      ctx.fillRect(x + 6, y + 10, 18, 2);
+      ctx.fillRect(x + 6, y + 14, 18, 2);
+      break;
+    case 10: // chest
+      ctx.fillStyle = ((tx + ty) % 2) ? P.grass : P.grassL;
+      ctx.fillRect(x, y, TS, TS);
+      if (t === 6) { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(x, y, TS, TS); }
+      ctx.fillStyle = P.wood;
+      ctx.fillRect(x + 4, y + 10, 22, 16);
+      ctx.fillStyle = P.woodL;
+      ctx.fillRect(x + 4, y + 10, 22, 6);
+      ctx.fillStyle = P.gold;
+      ctx.fillRect(x + 12, y + 14, 6, 6);
+      ctx.fillRect(x + 14, y + 12, 2, 10);
+      break;
+    case 11: // campfire
+      ctx.fillStyle = P.path;
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(x + 8, y + 16, 14, 10);
+      const flicker = Math.sin(Date.now() * 0.01) * 2;
+      ctx.fillStyle = '#ff6600';
+      ctx.fillRect(x + 10, y + 8 + flicker, 10, 10);
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(x + 12, y + 6 + flicker, 6, 8);
+      ctx.fillStyle = '#ffff00';
+      ctx.fillRect(x + 13, y + 4 + flicker, 4, 6);
+      break;
+    case 12: // desk
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = P.wood;
+      ctx.fillRect(x + 2, y + 10, 26, 16);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(x + 4, y + 4, 18, 12);
+      ctx.fillStyle = P.cyan;
+      ctx.fillRect(x + 6, y + 6, 14, 2);
+      ctx.fillRect(x + 6, y + 10, 10, 2);
+      break;
+    case 13: // bookshelf
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = P.wood;
+      ctx.fillRect(x + 2, y + 2, 26, 28);
+      const bookColors = ['#ef4444','#3b82f6','#22c55e','#f97316','#8b5cf6','#ffd700'];
+      for (let bi = 0; bi < 6; bi++) {
+        ctx.fillStyle = bookColors[bi];
+        ctx.fillRect(x + 4 + bi * 4, y + 5, 3, 10);
+        ctx.fillRect(x + 4 + bi * 4, y + 17, 3, 10);
+      }
+      break;
+    case 14: // computer/terminal
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(x + 4, y + 4, 22, 16);
+      ctx.fillStyle = P.cyan;
+      ctx.fillRect(x + 6, y + 6, 18, 12);
+      ctx.fillStyle = '#003333';
+      ctx.fillRect(x + 6, y + 6, 18, 12);
+      ctx.fillStyle = P.cyan;
+      ctx.fillRect(x + 8, y + 8, 10, 2);
+      ctx.fillRect(x + 8, y + 12, 8, 2);
+      ctx.fillRect(x + 8, y + 16, 12, 2);
+      ctx.fillStyle = '#555';
+      ctx.fillRect(x + 12, y + 20, 6, 4);
+      break;
+    case 15: // trophy/statue
+      ctx.fillStyle = ((ty + tx) % 2) ? P.grassL : P.grass;
+      ctx.fillRect(x, y, TS, TS);
+      if (objectMap[ty]?.[tx]?.type === 'npc' && worldMap[ty]?.[tx] === 6) {
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(x, y, TS, TS);
+      }
+      ctx.fillStyle = P.gold;
+      ctx.fillRect(x + 10, y + 4, 10, 12);
+      ctx.fillRect(x + 8, y + 8, 14, 6);
+      ctx.fillRect(x + 12, y + 16, 6, 6);
+      ctx.fillRect(x + 8, y + 22, 14, 4);
+      ctx.fillStyle = '#ffed4a';
+      ctx.fillRect(x + 12, y + 6, 6, 4);
+      break;
+    case 16: // flower
+      ctx.fillStyle = P.grass;
+      ctx.fillRect(x, y, TS, TS);
+      const fc = ['#f0abfc','#ffd700','#00f5ff','#ff6b6b'][((tx * 3 + ty * 7) % 4)];
+      ctx.fillStyle = P.grassL;
+      ctx.fillRect(x + 12, y + 18, 4, 8);
+      ctx.fillStyle = fc;
+      ctx.fillRect(x + 10, y + 8, 10, 10);
+      ctx.fillStyle = P.white;
+      ctx.fillRect(x + 13, y + 11, 4, 4);
+      break;
+    case 17: // bridge
+      ctx.fillStyle = P.water;
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = P.wood;
+      ctx.fillRect(x + 2, y + 8, TS - 4, 14);
+      ctx.fillStyle = P.woodL;
+      for (let i = 0; i < 4; i++) ctx.fillRect(x + 4 + i * 6, y + 8, 4, 14);
+      break;
+    case 8: // portal
+      ctx.fillStyle = '#0a0a2e';
+      ctx.fillRect(x, y, TS, TS);
+      const pt = Date.now() * 0.003;
+      const pr = Math.sin(pt) * 0.5 + 0.5;
+      ctx.fillStyle = `rgba(139,92,246,${0.3 + pr * 0.4})`;
+      ctx.fillRect(x + 4, y + 4, TS - 8, TS - 8);
+      ctx.fillStyle = `rgba(240,171,252,${0.5 + pr * 0.5})`;
+      ctx.fillRect(x + 8, y + 8, TS - 16, TS - 16);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(x + 14, y + 14, 4, 4);
+      break;
+    case 19: // wood floor
+      ctx.fillStyle = '#2a1a0a';
+      ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(x + 2, y + 2, TS - 4, TS - 4);
+      break;
+    default:
+      ctx.fillStyle = P.grass;
+      ctx.fillRect(x, y, TS, TS);
+  }
+}
+
+// ----- CHARACTER SPRITE -----
+function drawCharacter(x, y, facing, frame, isPlayer = true) {
+  const col = isPlayer
+    ? { body: '#1a3a6c', acc: '#ffd700', skin: '#f5cba7', hair: '#2c1810', shirt: '#00f5ff' }
+    : { body: '#2a2a4a', acc: '#f0abfc', skin: '#d4956b', hair: '#1a1a1a', shirt: '#8b5cf6' };
+
+  const bobY = Math.sin(frame * 0.5) * 1.5;
+  const by = y + bobY;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x - 6, y + 26, 20, 4);
+
+  // Legs
+  if (facing === 'left' || facing === 'right') {
+    ctx.fillStyle = '#1a1a3a';
+    const legOff = Math.sin(frame * 0.8) * 3;
+    ctx.fillRect(x + 1, by + 18, 5, 8 + legOff);
+    ctx.fillRect(x + 6, by + 18, 5, 8 - legOff);
+  } else {
+    ctx.fillStyle = '#1a1a3a';
+    ctx.fillRect(x + 2, by + 18, 5, 8);
+    ctx.fillRect(x + 8, by + 18, 5, 8);
+  }
+  // Shoes
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x, by + 24, 7, 4);
+  ctx.fillRect(x + 7, by + 24, 7, 4);
+
+  // Body
+  ctx.fillStyle = col.shirt;
+  ctx.fillRect(x, by + 8, 16, 12);
+  ctx.fillStyle = col.body;
+  ctx.fillRect(x + 1, by + 9, 14, 10);
+
+  // Arms
+  ctx.fillStyle = col.skin;
+  const armSwing = Math.sin(frame * 0.8) * 3;
+  if (facing === 'left') {
+    ctx.fillRect(x - 4, by + 9, 5, 10);
+    ctx.fillRect(x + 15, by + 9 + armSwing, 5, 10);
+  } else if (facing === 'right') {
+    ctx.fillRect(x + 16, by + 9, 5, 10);
+    ctx.fillRect(x - 4, by + 9 + armSwing, 5, 10);
+  } else {
+    ctx.fillRect(x - 4, by + 9 + armSwing, 5, 10);
+    ctx.fillRect(x + 15, by + 9 - armSwing, 5, 10);
+  }
+
+  // Head
+  ctx.fillStyle = col.skin;
+  ctx.fillRect(x + 2, by - 4, 12, 12);
+  // Hair
+  ctx.fillStyle = col.hair;
+  ctx.fillRect(x + 2, by - 4, 12, 5);
+  // Eyes
+  ctx.fillStyle = '#1a1a2a';
+  if (facing !== 'up') {
+    ctx.fillRect(x + 4, by + 1, 2, 2);
+    ctx.fillRect(x + 10, by + 1, 2, 2);
+    // Mouth
+    ctx.fillRect(x + 5, by + 5, 6, 1);
+  }
+  // Badge/accessory
+  ctx.fillStyle = col.acc;
+  ctx.fillRect(x + 5, by + 11, 6, 2);
+}
+
+// ----- FLOATING TEXT -----
+const floatingTexts = [];
+function addFloatingText(x, y, text, color = '#ffd700') {
+  floatingTexts.push({ x, y: y - 10, text, color, timer: 60, vy: -0.5 });
+}
+
+// ----- XP SYSTEM -----
+function addXP(amount) {
+  player.xp += amount;
+  addFloatingText(player.x - cam.x, player.y - cam.y, `+${amount} XP`, '#ffd700');
+  if (player.xp >= player.maxXp) {
+    player.xp -= player.maxXp;
+    player.level++;
+    player.maxXp = Math.floor(player.maxXp * 1.3);
+    addFloatingText(player.x - cam.x, player.y - cam.y, 'LEVEL UP!', '#00f5ff');
+    showAchievement('Level Up!', `Now Level ${player.level}`);
+  }
+  document.getElementById('xp-bar').style.width = (player.xp / player.maxXp * 100) + '%';
+  document.getElementById('level-display').textContent = `LVL ${player.level}`;
+}
+
+// ----- ACHIEVEMENT POPUP -----
+function showAchievement(title, text) {
+  const popup = document.getElementById('achievement-popup');
+  document.getElementById('ach-popup-text').textContent = text;
+  popup.style.display = 'block';
+  setTimeout(() => { popup.style.display = 'none'; }, 3500);
+}
+
+// ----- ZONE DETECTION -----
+function detectZone() {
+  const tx = Math.floor(player.x / TS);
+  const ty = Math.floor(player.y / TS);
+  let newZone = 'spawn';
+  if (ty < 18 && tx > 18 && tx < 42) newZone = 'forge';
+  else if (tx > 42 && ty > 18 && ty < 42) newZone = 'dungeon';
+  else if (ty > 42 && tx > 18 && tx < 42) newZone = 'hall';
+  else if (tx < 18 && ty > 18 && ty < 42) newZone = 'contact';
+
+  if (newZone !== game.zone) {
+    const zone = ZONES[newZone];
+    game.zone = newZone;
+    document.getElementById('zone-label').textContent = `◈ ${zone.name}`;
+    document.getElementById('zone-label').style.borderColor = zone.color;
+    document.getElementById('zone-label').style.color = zone.color;
+
+    if (!player.unlockedZones.has(newZone)) {
+      player.unlockedZones.add(newZone);
+      showZoneTransition(zone);
+      addXP(50);
+      if (!game.achievementsUnlocked.has(newZone)) {
+        game.achievementsUnlocked.add(newZone);
+        showAchievement('New Zone!', zone.name);
+      }
+    }
+  }
+}
+
+function showZoneTransition(zone) {
+  const el = document.getElementById('zone-transition');
+  document.getElementById('zone-name-display').textContent = zone.name;
+  document.getElementById('zone-name-display').style.color = zone.color;
+  document.getElementById('zone-sub-display').textContent = zone.sub;
+  el.style.display = 'flex';
+  setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
+
+// ----- INTERACT -----
+let lastInteract = 0;
+function tryInteract() {
+  if (Date.now() - lastInteract < 300) return;
+  if (dlg.active) { advanceDialogue(); return; }
+  lastInteract = Date.now();
+
+  const tx = Math.floor(player.x / TS);
+  const ty = Math.floor(player.y / TS);
+  const checks = [
+    [tx, ty - 1], [tx, ty + 1], [tx - 1, ty], [tx + 1, ty],
+    [tx, ty], [tx + 1, ty - 1], [tx - 1, ty - 1]
+  ];
+
+  for (const [cx, cy] of checks) {
+    const obj = getObject(cx, cy);
+    if (obj && obj.dialogue) {
+      startDialogue(obj);
+      return;
+    }
+  }
+}
+
+function startDialogue(obj) {
+  const dialogueKeys = obj.dialogue;
+  const lines = [];
+  dialogueKeys.forEach(key => {
+    const entries = DIALOGUES[key];
+    if (entries) entries.forEach(e => lines.push({ ...e, obj }));
+  });
+  if (!lines.length) return;
+
+  dlg.active = true;
+  dlg.queue = lines;
+  dlg.currentIdx = 0;
+  dlg.portrait = obj.portrait || 'default';
+
+  document.getElementById('dialogue').style.display = 'block';
+  showDialogueLine(dlg.queue[0]);
+  addXP(10);
+}
+
+function showDialogueLine(line) {
+  dlg.speaker = line.speaker || '???';
+  dlg.text = line.text || '';
+  dlg.displayText = '';
+  dlg.charIdx = 0;
+
+  document.getElementById('speaker-name').textContent = dlg.speaker;
+  document.getElementById('dialogue-text').textContent = '';
+  document.getElementById('dialogue-choices').style.display = 'none';
+
+  const portrait = document.getElementById('speaker-portrait');
+  drawPortrait(portrait, dlg.portrait);
+  dlg.typing = true;
+}
+
+function advanceDialogue() {
+  if (dlg.typing && dlg.charIdx < dlg.text.length) {
+    // Skip typing
+    dlg.displayText = dlg.text;
+    dlg.charIdx = dlg.text.length;
+    document.getElementById('dialogue-text').textContent = dlg.displayText;
+    dlg.typing = false;
+    return;
+  }
+  dlg.currentIdx++;
+  if (dlg.currentIdx >= dlg.queue.length) {
+    closeDialogue();
+    // Check for unlocks
+    const obj = dlg.queue[dlg.queue.length - 1]?.obj;
+    if (obj?.unlocks === 'skills_menu') openMenu('skills');
+    if (obj?.id === 'adify_boss') { addXP(200); showAchievement('Boss Defeated!', 'ADIFY conquered!'); }
+    if (obj?.id === 'skill_chest') { addXP(100); showAchievement('Skills Unlocked!', 'Full Skill Codex'); }
+    if (obj?.id === 'ach_chest') { addXP(150); showAchievement('Historian!', 'All achievements viewed'); }
+    if (obj?.id === 'proj_chest') { addXP(120); showAchievement('Explorer!', 'Full Project Vault'); }
+    if (obj?.id === 'final_portal') { addXP(500); showAchievement('World Complete!', 'You know Ahmad!'); }
+  } else {
+    showDialogueLine(dlg.queue[dlg.currentIdx]);
+  }
+}
+
+function closeDialogue() {
+  dlg.active = false;
+  document.getElementById('dialogue').style.display = 'none';
+}
+
+// Dialogue typewriter tick
+function tickDialogue() {
+  if (!dlg.active || !dlg.typing) return;
+  if (dlg.charIdx < dlg.text.length) {
+    dlg.charIdx = Math.min(dlg.charIdx + 2, dlg.text.length);
+    dlg.displayText = dlg.text.slice(0, dlg.charIdx);
+    document.getElementById('dialogue-text').textContent = dlg.displayText;
+  } else {
+    dlg.typing = false;
+  }
+}
+
+// ----- MENU -----
+function openMenu(type) {
+  game.menuOpen = true;
+  game.menuType = type;
+  const screen = document.getElementById('menu-screen');
+  const content = document.getElementById('menu-content');
+  const title = document.getElementById('menu-title');
+  screen.style.display = 'flex';
+
+  if (type === 'skills') {
+    title.textContent = '⚒ SKILL CODEX';
+    const skills = [
+      { name: 'Python', level: 90, cat: 'AI/ML' },
+      { name: 'PyTorch', level: 80, cat: 'AI/ML' },
+      { name: 'Stable Diffusion', level: 85, cat: 'AI/ML' },
+      { name: 'Computer Vision', level: 78, cat: 'AI/ML' },
+      { name: 'Scikit-Learn', level: 82, cat: 'AI/ML' },
+      { name: 'HTML/CSS/JS', level: 90, cat: 'Web' },
+      { name: 'React', level: 75, cat: 'Web' },
+      { name: 'PHP', level: 70, cat: 'Web' },
+      { name: 'C/C++', level: 85, cat: 'Systems' },
+      { name: 'Rust', level: 65, cat: 'Systems' },
+      { name: 'Socket Programming', level: 80, cat: 'Systems' },
+      { name: 'Docker', level: 75, cat: 'DevOps' },
+      { name: 'Linux/Bash', level: 80, cat: 'DevOps' },
+      { name: 'SQL', level: 82, cat: 'DB' },
+      { name: 'Git/GitHub', level: 88, cat: 'Tools' },
+    ];
+    content.innerHTML = `<div class="skill-tree">` +
+      skills.map(s => `
+        <div class="skill-node ${s.level >= 85 ? 'mastered' : 'unlocked'}">
+          <div class="skill-node-name">${s.name}</div>
+          <div class="skill-node-level">${s.cat} — ${s.level}/100 ${s.level >= 85 ? '★' : ''}</div>
+          <div class="skill-bar"><div class="skill-bar-fill" style="width:${s.level}%"></div></div>
+        </div>`).join('') + `</div>`;
+  } else if (type === 'quests') {
+    title.textContent = '📜 QUEST LOG';
+    content.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:0.75rem">
+        ${[
+          ['✓ Enter the world', 'Complete', '#22c55e'],
+          [player.unlockedZones.has('forge') ? '✓' : '○', 'Visit the Skill Forge', player.unlockedZones.has('forge') ? '#22c55e' : '#ffd700'],
+          [player.unlockedZones.has('dungeon') ? '✓' : '○', 'Raid the Project Dungeon', player.unlockedZones.has('dungeon') ? '#22c55e' : '#ffd700'],
+          [player.unlockedZones.has('hall') ? '✓' : '○', 'Explore the Hall of Achievements', player.unlockedZones.has('hall') ? '#22c55e' : '#ffd700'],
+          [player.unlockedZones.has('contact') ? '✓' : '○', 'Visit the Contact Portal', player.unlockedZones.has('contact') ? '#22c55e' : '#ffd700'],
+          [game.achievementsUnlocked.has('adify_boss') ? '✓' : '○', 'Defeat ADIFY Boss', game.achievementsUnlocked.has('adify_boss') ? '#22c55e' : '#ffd700'],
+          [`${player.unlockedZones.size}/5 zones`, 'Collect all zones', '#8b5cf6'],
+        ].map(([icon, text, col]) => `
+          <div style="border:1px solid rgba(255,215,0,0.2);padding:0.5rem;background:rgba(255,215,0,0.03)">
+            <span style="color:${col};font-size:0.35rem">${icon} ${text}</span>
+          </div>`).join('')}
+        <div style="margin-top:1rem;border:1px solid rgba(0,245,255,0.2);padding:0.75rem;background:rgba(0,245,255,0.03)">
+          <div style="font-size:0.32rem;color:rgba(0,245,255,0.7);margin-bottom:0.5rem">EXPLORER STATS</div>
+          <div style="font-size:0.38rem;color:#fff">Level: ${player.level} | XP: ${player.xp}/${player.maxXp}</div>
+          <div style="font-size:0.35rem;color:rgba(255,255,255,0.6);margin-top:0.3rem">Zones: ${player.unlockedZones.size}/5 | Items: ${game.achievementsUnlocked.size}</div>
+        </div>
+      </div>`;
+  }
+
+  // Close button
+  document.getElementById('menu-panel').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;border-bottom:2px solid rgba(255,215,0,0.3);padding-bottom:0.75rem">
+      <div style="font-size:0.65rem;color:#ffd700">${title.textContent}</div>
+      <button onclick="closeMenu()" style="font-family:'Press Start 2P',monospace;font-size:0.38rem;color:#fff;background:none;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;cursor:pointer">✕ CLOSE</button>
+    </div>
+    ${content.outerHTML}`;
+}
+
+function closeMenu() {
+  game.menuOpen = false;
+  document.getElementById('menu-screen').style.display = 'none';
+}
+
+// ----- MINIMAP -----
+function drawMinimap() {
+  const mc = document.getElementById('minimap-canvas');
+  const mctx = mc.getContext('2d');
+  const mw = mc.width, mh = mc.height;
+  const scaleX = mw / MAP_W, scaleY = mh / MAP_H;
+
+  mctx.fillStyle = '#050510';
+  mctx.fillRect(0, 0, mw, mh);
+
+  // Draw zones
+  const zoneColors = { forge: '#f0abfc44', dungeon: '#ffd70044', hall: '#22c55e44', contact: '#f9731644', spawn: '#00f5ff22' };
+  mctx.fillStyle = zoneColors.forge;
+  mctx.fillRect(20 * scaleX, 2 * scaleY, 20 * scaleX, 17 * scaleY);
+  mctx.fillStyle = zoneColors.dungeon;
+  mctx.fillRect(43 * scaleX, 20 * scaleY, 17 * scaleX, 20 * scaleY);
+  mctx.fillStyle = zoneColors.hall;
+  mctx.fillRect(20 * scaleX, 43 * scaleY, 20 * scaleX, 17 * scaleY);
+  mctx.fillStyle = zoneColors.contact;
+  mctx.fillRect(2 * scaleX, 20 * scaleY, 17 * scaleX, 20 * scaleY);
+
+  // Water
+  mctx.fillStyle = '#0a3a5c';
+  [[14,14],[40,14],[14,40],[40,40]].forEach(([wx,wy]) => {
+    mctx.fillRect(wx * scaleX, wy * scaleY, 6 * scaleX, 6 * scaleY);
+  });
+
+  // Paths
+  mctx.fillStyle = '#8b735566';
+  for (let ty = 0; ty < MAP_H; ty++) for (let tx = 0; tx < MAP_W; tx++) {
+    if (worldMap[ty][tx] === 1) mctx.fillRect(tx * scaleX, ty * scaleY, scaleX, scaleY);
+  }
+
+  // Player dot
+  const px = (player.x / TS) * scaleX, py = (player.y / TS) * scaleY;
+  mctx.fillStyle = '#00f5ff';
+  mctx.fillRect(px - 1, py - 1, 3, 3);
+  // Blink
+  if (Math.sin(Date.now() * 0.008) > 0) {
+    mctx.strokeStyle = '#00f5ff';
+    mctx.lineWidth = 0.5;
+    mctx.strokeRect(px - 2, py - 2, 5, 5);
+  }
+}
+
+// ----- MAIN LOOP -----
+let lastTime = 0;
+function gameLoop(ts) {
+  if (!game.started) { requestAnimationFrame(gameLoop); return; }
+  const dt = Math.min(ts - lastTime, 50);
+  lastTime = ts;
+
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // ----- UPDATE PLAYER -----
+  if (!dlg.active && !game.menuOpen) {
+    const spd = player.speed * (dt / 16.67);
+    let dx = 0, dy = 0;
+    if (keys['ArrowLeft']  || keys['KeyA']) { dx -= spd; player.facing = 'left'; }
+    if (keys['ArrowRight'] || keys['KeyD']) { dx += spd; player.facing = 'right'; }
+    if (keys['ArrowUp']    || keys['KeyW']) { dy -= spd; player.facing = 'up'; }
+    if (keys['ArrowDown']  || keys['KeyS']) { dy += spd; player.facing = 'down'; }
+
+    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+    player.moving = dx !== 0 || dy !== 0;
+
+    // Collision X
+    const nx = player.x + dx;
+    const tx1 = Math.floor((nx - 8) / TS), tx2 = Math.floor((nx + 8) / TS);
+    const ty_mid = Math.floor(player.y / TS);
+    if (!isSolid(tx1, ty_mid) && !isSolid(tx2, ty_mid)) player.x = nx;
+
+    // Collision Y
+    const ny = player.y + dy;
+    const ty1 = Math.floor((ny - 8) / TS), ty2 = Math.floor((ny + 4) / TS);
+    const tx_mid = Math.floor(player.x / TS);
+    if (!isSolid(tx_mid, ty1) && !isSolid(tx_mid, ty2)) player.y = ny;
+
+    if (player.moving) {
+      player.frameTimer += dt;
+      if (player.frameTimer > 1000 / player.frameRate) {
+        player.frame++;
+        player.frameTimer = 0;
+      }
+    }
+
+    // Interact
+    if (keys['KeyE'] || keys['Space']) tryInteract();
+    if (keys['KeyI']) { keys['KeyI'] = false; openMenu('skills'); }
+    if (keys['KeyM']) { keys['KeyM'] = false; openMenu('quests'); }
+    if (keys['Escape']) { keys['Escape'] = false; if (game.menuOpen) closeMenu(); else openMenu('quests'); }
+  } else {
+    if ((keys['KeyE'] || keys['Space'] || keys['Enter'])) {
+      keys['KeyE'] = false; keys['Space'] = false; keys['Enter'] = false;
+      if (dlg.active) advanceDialogue();
+    }
+    if (keys['Escape']) { keys['Escape'] = false; if (game.menuOpen) closeMenu(); }
+  }
+
+  detectZone();
+
+  // ----- CAMERA -----
+  const targetCamX = player.x - W / 2;
+  const targetCamY = player.y - H / 2;
+  cam.x += (targetCamX - cam.x) * 0.1;
+  cam.y += (targetCamY - cam.y) * 0.1;
+  cam.x = Math.max(0, Math.min(MAP_W * TS - W, cam.x));
+  cam.y = Math.max(0, Math.min(MAP_H * TS - H, cam.y));
+
+  // ----- RENDER WORLD -----
+  const startTX = Math.max(0, Math.floor(cam.x / TS));
+  const endTX   = Math.min(MAP_W - 1, Math.ceil((cam.x + W) / TS));
+  const startTY = Math.max(0, Math.floor(cam.y / TS));
+  const endTY   = Math.min(MAP_H - 1, Math.ceil((cam.y + H) / TS));
+
+  for (let ty = startTY; ty <= endTY; ty++) {
+    for (let tx = startTX; tx <= endTX; tx++) {
+      drawTile(tx * TS - cam.x, ty * TS - cam.y, tx, ty);
+    }
+  }
+
+  // ----- OBJECT INDICATORS -----
+  for (let ty = startTY; ty <= endTY; ty++) {
+    for (let tx = startTX; tx <= endTX; tx++) {
+      const obj = objectMap[ty]?.[tx];
+      if (obj) {
+        const sx = tx * TS - cam.x + TS / 2;
+        const sy = ty * TS - cam.y;
+        // Proximity indicator
+        const pdx = player.x - tx * TS, pdy = player.y - ty * TS;
+        const dist = Math.sqrt(pdx * pdx + pdy * pdy);
+        if (dist < TS * 2.5) {
+          ctx.fillStyle = 'rgba(255,215,0,0.9)';
+          ctx.font = '10px Press Start 2P';
+          ctx.textAlign = 'center';
+          const bounce = Math.sin(Date.now() * 0.005) * 2;
+          ctx.fillText('!', sx, sy - 8 + bounce);
+          // Label
+          ctx.font = '5px Press Start 2P';
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fillText('[E]', sx, sy - 1 + bounce);
+          ctx.textAlign = 'left';
+        }
+      }
+    }
+  }
+
+  // ----- RENDER PLAYER -----
+  const screenX = Math.floor(player.x - cam.x - 8);
+  const screenY = Math.floor(player.y - cam.y - 20);
+  drawCharacter(screenX, screenY, player.facing, player.frame, true);
+
+  // Name tag
+  ctx.font = '5px Press Start 2P';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(screenX - 18, screenY - 12, 48, 10);
+  ctx.fillStyle = P.gold;
+  ctx.fillText('AHMAD', screenX + 6, screenY - 4);
+  ctx.textAlign = 'left';
+
+  // ----- FLOATING TEXTS -----
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy;
+    ft.timer--;
+    ctx.globalAlpha = ft.timer / 60;
+    ctx.font = 'bold 7px Press Start 2P';
+    ctx.fillStyle = ft.color;
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+    if (ft.timer <= 0) floatingTexts.splice(i, 1);
+  }
+
+  // ----- TICK DIALOGUE -----
+  tickDialogue();
+
+  // ----- MINIMAP -----
+  drawMinimap();
+
+  // ----- SCANLINE OVERLAY -----
+  ctx.fillStyle = 'rgba(0,0,0,0.03)';
+  for (let sy = 0; sy < H; sy += 4) ctx.fillRect(0, sy, W, 2);
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ----- TITLE SCREEN SETUP -----
+function setupTitleScreen() {
+  // Generate stars
+  const container = document.getElementById('stars-container');
+  for (let i = 0; i < 150; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.cssText = `
+      left:${Math.random() * 100}%;top:${Math.random() * 100}%;
+      width:${Math.random() * 3 + 1}px;height:${Math.random() * 3 + 1}px;
+      animation-delay:${Math.random() * 2}s;animation-duration:${Math.random() * 2 + 1}s
+    `;
+    container.appendChild(star);
+  }
+
+  // Draw title character preview
+  const titleCanvas = document.getElementById('title-char-canvas');
+  const tc = titleCanvas.getContext('2d');
+  tc.imageSmoothingEnabled = false;
+  tc.fillStyle = '#111';
+  tc.fillRect(0, 0, 80, 80);
+  // Simple pixel art character on title
+  function drawTitleChar() {
+    tc.clearRect(0, 0, 80, 80);
+    tc.fillStyle = '#0a0a1a';
+    tc.fillRect(0, 0, 80, 80);
+    const t = Date.now() * 0.003;
+    const by = Math.sin(t) * 2;
+    // Body
+    tc.fillStyle = '#1a3a6c';
+    tc.fillRect(28, 38 + by, 22, 20);
+    // Shirt accent
+    tc.fillStyle = '#00f5ff';
+    tc.fillRect(30, 40 + by, 18, 4);
+    // Head
+    tc.fillStyle = '#f5cba7';
+    tc.fillRect(30, 20 + by, 18, 18);
+    // Hair
+    tc.fillStyle = '#2c1810';
+    tc.fillRect(30, 20 + by, 18, 7);
+    // Eyes
+    tc.fillStyle = '#1a1a2a';
+    tc.fillRect(33, 28 + by, 4, 4);
+    tc.fillRect(41, 28 + by, 4, 4);
+    // Badge
+    tc.fillStyle = '#ffd700';
+    tc.fillRect(33, 41 + by, 12, 3);
+    // Legs
+    tc.fillStyle = '#1a1a3a';
+    tc.fillRect(30, 56 + by, 8, 14);
+    tc.fillRect(40, 56 + by, 8, 14);
+    // Shoes
+    tc.fillStyle = '#111';
+    tc.fillRect(28, 68 + by, 10, 6);
+    tc.fillRect(40, 68 + by, 10, 6);
+    // Cape
+    tc.fillStyle = 'rgba(139,92,246,0.8)';
+    tc.fillRect(20, 38 + by, 8, 18);
+    tc.fillRect(50, 38 + by, 8, 18);
+    // Glow
+    tc.fillStyle = `rgba(0,245,255,${0.1 + Math.sin(t * 2) * 0.05})`;
+    tc.fillRect(0, 0, 80, 80);
+
+    requestAnimationFrame(drawTitleChar);
+  }
+  drawTitleChar();
+}
+
+// ----- START GAME -----
+function startGame() {
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-canvas').style.display = 'block';
+  document.getElementById('hud').style.display = 'block';
+  document.getElementById('hud-quest').style.display = 'block';
+
+  // Resize canvas
+  const resize = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx.imageSmoothingEnabled = false;
+  };
+  resize();
+  window.addEventListener('resize', resize);
+
+  buildWorld();
+  game.started = true;
+
+  // Welcome sequence
+  setTimeout(() => {
+    const welcomeObj = objectMap[24]?.[28];
+    if (welcomeObj) startDialogue(welcomeObj);
+  }, 800);
+
+  requestAnimationFrame(gameLoop);
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.addEventListener('keydown', e => {
+  if (e.code === 'Enter' || e.code === 'Space') {
+    if (!game.started) startGame();
+  }
+});
+
+// ----- TOUCH CONTROLS -----
+let touchStartX = 0, touchStartY = 0;
+let virtualJoystick = { active: false, x: 0, y: 0, baseX: 0, baseY: 0 };
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  if (touch.clientX > window.innerWidth * 0.7) {
+    tryInteract();
+    return;
+  }
+  virtualJoystick.active = true;
+  virtualJoystick.baseX = touch.clientX;
+  virtualJoystick.baseY = touch.clientY;
+  virtualJoystick.x = touch.clientX;
+  virtualJoystick.y = touch.clientY;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!virtualJoystick.active) return;
+  const touch = e.touches[0];
+  virtualJoystick.x = touch.clientX;
+  virtualJoystick.y = touch.clientY;
+  const dx = virtualJoystick.x - virtualJoystick.baseX;
+  const dy = virtualJoystick.y - virtualJoystick.baseY;
+  keys['ArrowLeft']  = dx < -20;
+  keys['ArrowRight'] = dx > 20;
+  keys['ArrowUp']    = dy < -20;
+  keys['ArrowDown']  = dy > 20;
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  virtualJoystick.active = false;
+  keys['ArrowLeft'] = keys['ArrowRight'] = keys['ArrowUp'] = keys['ArrowDown'] = false;
+});
+
+setupTitleScreen();
+</script>
+</body>
+</html>
